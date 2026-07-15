@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Pulled Apart · Counter</title>
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --card:#151515;
+    --card2:#1d1d1d;
+    --red:#e10600;
+    --red-glow:rgba(225,6,0,.45);
+    --txt:#f5f5f5;
+    --muted:#8a8a8a;
+    --line:#2a2a2a;
+    --gold:#ffb020;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--txt);
+    font-family:"Segoe UI",Roboto,system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;}
+  body{min-height:100dvh;padding:env(safe-area-inset-top) 14px calc(96px + env(safe-area-inset-bottom)) 14px;}
+  /* ---- Header ---- */
+  header{padding:14px 2px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{display:flex;flex-direction:column;line-height:1}
+  .brand .name{font-weight:800;font-style:italic;font-size:22px;letter-spacing:.5px;text-transform:uppercase}
+  .brand .name span{color:var(--red)}
+  .brand .tag{font-size:9.5px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:5px}
+  .clock{text-align:right;line-height:1.1}
+  .clock .time{font-weight:800;font-size:26px;font-variant-numeric:tabular-nums;letter-spacing:1px}
+  .clock .date{font-size:10px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-top:3px}
+  .rule{height:2px;background:linear-gradient(90deg,var(--red),transparent);margin:6px 2px 16px;border-radius:2px}
+
+  /* ---- Counter cards ---- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:16px;
+    position:relative;overflow:hidden;transition:border-color .2s}
+  .card.active-pulse{animation:pulse .5s ease}
+  @keyframes pulse{0%{border-color:var(--red);box-shadow:0 0 22px var(--red-glow)}100%{border-color:var(--line);box-shadow:none}}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .cname{font-weight:800;font-size:15px;text-transform:uppercase;letter-spacing:1px;padding-top:3px;word-break:break-word}
+  .menu-btn{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;padding:2px 8px;cursor:pointer}
+  .count-row{display:flex;align-items:flex-end;gap:10px;margin:2px 0 4px}
+  .count{font-weight:800;font-size:74px;line-height:.95;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+  .count-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;padding-bottom:12px}
+  .count-sub b{color:var(--txt);font-weight:700}
+
+  .pace{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px}
+  .pace .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+  .pace.live .dot{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .pace b{color:var(--txt);font-weight:800;font-size:13px}
+
+  .tap-row{display:flex;gap:10px}
+  .tap{flex:1;background:var(--red);color:#fff;border:none;border-radius:14px;padding:20px;
+    font-weight:800;font-size:20px;text-transform:uppercase;letter-spacing:2px;cursor:pointer;
+    box-shadow:0 6px 0 #8f0400;user-select:none;transition:transform .05s,box-shadow .05s}
+  .tap:active{transform:translateY(4px);box-shadow:0 2px 0 #8f0400}
+  .undo{width:60px;background:var(--card2);color:var(--muted);border:1px solid var(--line);border-radius:14px;
+    font-weight:800;font-size:20px;cursor:pointer}
+  .undo:active{background:#252525}
+
+  /* records */
+  .records{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+  .rec{background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px 6px;text-align:center;position:relative}
+  .rec .rv{font-weight:800;font-size:17px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .rec .rl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px;line-height:1.3}
+  .rec.hit{border-color:var(--gold);box-shadow:0 0 14px rgba(255,176,32,.35)}
+  .rec.hit .rv{color:var(--gold)}
+  .flame{position:absolute;top:-9px;right:-6px;font-size:15px;opacity:0;transition:opacity .3s}
+  .rec.hit .flame{opacity:1}
+
+  /* add button (floating) */
+  .fab{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom));
+    background:var(--card);border:1.5px solid var(--red);color:#fff;border-radius:30px;
+    padding:14px 26px;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:1.5px;
+    cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.6);z-index:20}
+  .fab:active{background:var(--red)}
+
+  .empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:14px;line-height:1.7}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;
+    z-index:50;padding:24px;backdrop-filter:blur(3px)}
+  .overlay.show{display:flex}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;width:100%;max-width:340px}
+  .modal h3{font-size:14px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:14px;color:var(--txt)}
+  .modal input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:14px;
+    color:var(--txt);font-size:16px;font-family:inherit;margin-bottom:16px}
+  .modal input:focus{outline:none;border-color:var(--red)}
+  .mrow{display:flex;gap:10px}
+  .mrow button{flex:1;padding:13px;border-radius:11px;font-weight:800;font-size:13px;text-transform:uppercase;
+    letter-spacing:1px;cursor:pointer;border:1px solid var(--line)}
+  .btn-primary{background:var(--red);color:#fff;border-color:var(--red)!important}
+  .btn-ghost{background:transparent;color:var(--muted)}
+  .menu-list button{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--txt);
+    padding:14px 4px;font-size:15px;font-family:inherit;cursor:pointer;border-bottom:1px solid var(--line)}
+  .menu-list button:last-child{border-bottom:none}
+  .menu-list button.danger{color:var(--red)}
+  footer{text-align:center;color:#4a4a4a;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:6px 0 2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="name">PULLED<span>·</span>APART</div>
+    <div class="tag">Specialist VAG Breakers</div>
+  </div>
+  <div class="clock">
+    <div class="time" id="clockTime">--:--</div>
+    <div class="date" id="clockDate">—</div>
+  </div>
+</header>
+<div class="rule"></div>
+
+<div id="counters"></div>
+
+<button class="fab" id="addBtn">＋ New Counter</button>
+
+<footer>Personal Best Tracker</footer>
+
+<!-- Name modal -->
+<div class="overlay" id="nameOverlay">
+  <div class="modal">
+    <h3 id="nameTitle">New Counter</h3>
+    <input id="nameInput" type="text" placeholder="e.g. eBay Questions" maxlength="28" autocomplete="off">
+    <div class="mrow">
+      <button class="btn-ghost" onclick="closeName()">Cancel</button>
+      <button class="btn-primary" onclick="saveName()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Card menu modal -->
+<div class="overlay" id="menuOverlay">
+  <div class="modal">
+    <h3 id="menuTitle">Options</h3>
+    <div class="menu-list">
+      <button onclick="menuAction('rename')">✏️ Rename</button>
+      <button onclick="menuAction('resetToday')">↺ Reset today's count</button>
+      <button class="danger" onclick="menuAction('delete')">🗑 Delete counter</button>
+      <button class="btn-ghost" style="border-top:1px solid var(--line);color:var(--muted)" onclick="closeMenu()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const KEY = "pulledapart_counters_v1";
+const GAP_MAX = 5*60*1000;   // >5 min idle starts a new session
+const MIN_GAP = 0.4;          // ignore accidental double-taps (seconds)
+const MIN_SAMPLE = 4;         // taps needed before a pace counts as a record
+
+/* ---------- state ---------- */
+let state = load();
+let editingId = null;   // for name modal
+let menuId = null;      // for options modal
+let nameMode = "new";   // "new" | "rename"
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ const s = JSON.parse(raw); if(s && s.counters) return s; }
+  }catch(e){}
+  return { counters:[
+    newCounter("eBay Questions"),
+    newCounter("Breaker Link Quotes")
+  ]};
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+function newCounter(name){
+  return { id:"c"+Date.now()+Math.floor(Math.random()*999),
+    name, total:0, days:{}, bestDay:0, fastest:null, bestRate:0,
+    longestStreak:0, currentStreak:0, lastActiveDate:null,
+    lastTapTs:null, sessionStartTs:null, sessionCount:0 };
+}
+
+/* ---------- helpers ---------- */
+function dateStr(ts){ const d=new Date(ts); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function todayCount(c){ return c.days[dateStr(Date.now())]||0; }
+function fmtSecs(s){ if(s==null) return "—"; return (s<10? s.toFixed(1): Math.round(s))+"s"; }
+function fmtRate(r){ if(!r) return "—"; return Math.round(r)+"/h"; }
+
+/* ---------- clock ---------- */
+function tickClock(){
+  const n = new Date();
+  document.getElementById("clockTime").textContent =
+    String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");
+  document.getElementById("clockDate").textContent =
+    n.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+}
+setInterval(tickClock,1000); tickClock();
+
+/* live pace refresh (session decays over time) */
+setInterval(()=>{ document.querySelectorAll(".pace").forEach(el=>{
+  const c = state.counters.find(x=>x.id===el.dataset.id); if(c) updatePaceEl(el,c);
+}); }, 5000);
+
+/* ---------- streak ---------- */
+function updateStreak(c, today){
+  if(c.lastActiveDate === today) return;
+  const yest = dateStr(Date.now()-86400000);
+  c.currentStreak = (c.lastActiveDate === yest)? c.currentStreak+1 : 1;
+  c.lastActiveDate = today;
+  if(c.currentStreak > c.longestStreak) c.longestStreak = c.currentStreak;
+}
+
+/* ---------- the tap ---------- */
+function tap(id){
+  const c = state.counters.find(x=>x.id===id); if(!c) return;
+  const now = Date.now(), today = dateStr(now);
+  const hits = {best:false,fast:false,rate:false,day:false,streak:false};
+
+  c.total++;
+  c.days[today] = (c.days[today]||0)+1;
+  if(c.days[today] > c.bestDay){ c.bestDay = c.days[today]; hits.day=true; }
+
+  const prevStreak = c.longestStreak;
+  updateStreak(c, today);
+  if(c.longestStreak > prevStreak) hits.streak=true;
+
+  if(c.lastTapTs && (now - c.lastTapTs) <= GAP_MAX){
+    const gap = (now - c.lastTapTs)/1000;
+    if(gap >= MIN_GAP && (c.fastest==null || gap < c.fastest)){ c.fastest = gap; hits.fast=true; }
+    c.sessionCount++;
+  } else {
+    c.sessionStartTs = now; c.sessionCount = 1;
+  }
+  c.lastTapTs = now;
+
+  const elapsedH = (now - c.sessionStartTs)/3600000;
+  if(elapsedH > 0 && c.sessionCount >= MIN_SAMPLE){
+    const rate = c.sessionCount/elapsedH;
+    if(rate > c.bestRate){ c.bestRate = rate; hits.rate=true; }
+  }
+
+  save();
+  if(navigator.vibrate) navigator.vibrate(hits.fast||hits.day||hits.rate||hits.streak? [12,40,25] : 12);
+  renderCard(c, hits);
+}
+
+function undo(id){
+  const c = state.counters.find(x=>x.id===id); if(!c) return;
+  const today = dateStr(Date.now());
+  if((c.days[today]||0) > 0){ c.days[today]--; c.total=Math.max(0,c.total-1); if(c.sessionCount>0)c.sessionCount--; }
+  save(); renderCard(c,{});
+}
+
+/* ---------- render ---------- */
+function updatePaceEl(el,c){
+  const now = Date.now();
+  const live = c.lastTapTs && (now - c.lastTapTs) <= GAP_MAX && c.sessionCount>=1;
+  let rate = 0;
+  if(live){ const h=(now-c.sessionStartTs)/3600000; if(h>0) rate = c.sessionCount/h; }
+  el.classList.toggle("live", !!live);
+  el.querySelector(".pv").textContent = live? (rate?Math.round(rate):"—") : "idle";
+  el.querySelector(".pu").style.display = live&&rate? "inline":"none";
+}
+
+function cardHTML(c){
+  return `
+  <div class="card-top">
+    <div class="cname">${escapeHtml(c.name)}</div>
+    <button class="menu-btn" onclick="openMenu('${c.id}')">⋮</button>
+  </div>
+  <div class="count-row">
+    <div class="count" id="cnt-${c.id}">${todayCount(c)}</div>
+    <div class="count-sub">today<br>all-time <b>${c.total}</b></div>
+  </div>
+  <div class="pace" data-id="${c.id}"><span class="dot"></span>Pace <b class="pv">idle</b><span class="pu" style="display:none">/hr</span></div>
+  <div class="tap-row">
+    <button class="tap" onclick="tap('${c.id}')">Count +1</button>
+    <button class="undo" onclick="undo('${c.id}')">−</button>
+  </div>
+  <div class="records">
+    <div class="rec" data-r="day"><span class="flame">🔥</span><div class="rv">${c.bestDay}</div><div class="rl">Best day</div></div>
+    <div class="rec" data-r="fast"><span class="flame">⚡</span><div class="rv">${fmtSecs(c.fastest)}</div><div class="rl">Fastest</div></div>
+    <div class="rec" data-r="rate"><span class="flame">🔥</span><div class="rv">${fmtRate(c.bestRate)}</div><div class="rl">Best rate</div></div>
+    <div class="rec" data-r="streak"><span class="flame">🔥</span><div class="rv">${c.longestStreak}</div><div class="rl">Streak</div></div>
+  </div>`;
+}
+
+function renderAll(){
+  const wrap = document.getElementById("counters");
+  if(state.counters.length===0){
+    wrap.innerHTML = `<div class="empty">No counters yet.<br>Tap <b>＋ New Counter</b> below to start tracking.</div>`;
+    return;
+  }
+  wrap.innerHTML = "";
+  state.counters.forEach(c=>{
+    const div = document.createElement("div");
+    div.className="card"; div.id="card-"+c.id;
+    div.innerHTML = cardHTML(c);
+    wrap.appendChild(div);
+    updatePaceEl(div.querySelector(".pace"), c);
+  });
+}
+
+function renderCard(c, hits){
+  const card = document.getElementById("card-"+c.id);
+  if(!card){ renderAll(); return; }
+  card.innerHTML = cardHTML(c);
+  updatePaceEl(card.querySelector(".pace"), c);
+  // celebrate
+  card.classList.remove("active-pulse"); void card.offsetWidth; card.classList.add("active-pulse");
+  const map={day:"day",fast:"fast",rate:"rate",streak:"streak"};
+  Object.keys(map).forEach(k=>{ if(hits&&hits[k]){
+    const r=card.querySelector(`.rec[data-r="${k}"]`); if(r){ r.classList.add("hit"); setTimeout(()=>r.classList.remove("hit"),1600);} }});
+}
+
+function escapeHtml(s){ return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+/* ---------- name modal ---------- */
+document.getElementById("addBtn").onclick = ()=>{ nameMode="new"; editingId=null;
+  document.getElementById("nameTitle").textContent="New Counter";
+  document.getElementById("nameInput").value=""; showOverlay("nameOverlay");
+  setTimeout(()=>document.getElementById("nameInput").focus(),50); };
+function saveName(){
+  const v = document.getElementById("nameInput").value.trim();
+  if(!v) return;
+  if(nameMode==="new"){ state.counters.push(newCounter(v)); }
+  else if(editingId){ const c=state.counters.find(x=>x.id===editingId); if(c)c.name=v; }
+  save(); closeName(); renderAll();
+}
+function closeName(){ hideOverlay("nameOverlay"); }
+document.getElementById("nameInput").addEventListener("keydown",e=>{ if(e.key==="Enter")saveName(); });
+
+/* ---------- card menu ---------- */
+function openMenu(id){ menuId=id; const c=state.counters.find(x=>x.id===id);
+  document.getElementById("menuTitle").textContent = c? c.name : "Options"; showOverlay("menuOverlay"); }
+function closeMenu(){ hideOverlay("menuOverlay"); }
+function menuAction(a){
+  const c = state.counters.find(x=>x.id===menuId); if(!c){ closeMenu(); return; }
+  if(a==="rename"){ closeMenu(); nameMode="rename"; editingId=c.id;
+    document.getElementById("nameTitle").textContent="Rename Counter";
+    document.getElementById("nameInput").value=c.name; showOverlay("nameOverlay");
+    setTimeout(()=>document.getElementById("nameInput").select(),50); return; }
+  if(a==="resetToday"){ c.days[dateStr(Date.now())]=0; save(); }
+  if(a==="delete"){ state.counters = state.counters.filter(x=>x.id!==c.id); save(); }
+  closeMenu(); renderAll();
+}
+
+/* overlay helpers */
+function showOverlay(id){ document.getElementById(id).classList.add("show"); }
+function hideOverlay(id){ document.getElementById(id).classList.remove("show"); }
+document.querySelectorAll(".overlay").forEach(o=>o.addEventListener("click",e=>{ if(e.target===o) o.classList.remove("show"); }));
+
+/* ---------- offline / installable ---------- */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
+
+/* ---------- go ---------- */
+renderAll();
+</script>
+</body>
+</html>
